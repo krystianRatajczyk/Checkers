@@ -17,7 +17,7 @@ SCREEN_WIDTH = TILE_SIZE * COLS
 SCREEN_HEIGHT = TILE_SIZE * ROWS
 
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-pygame.display.set_caption("Checkers Capture Demo")
+pygame.display.set_caption("Checkers")
 clock = pygame.time.Clock()
 FPS = 60
 
@@ -33,6 +33,22 @@ board = [
 ]
 
 
+class Pawn:
+    def __init__(self, x, y, value):
+        self.x = x
+        self.y = y
+        self.value = value
+
+
+pawnsPosition = []
+
+for i in range(ROWS):
+    pawnsPosition.append([])
+    for j in range(COLS):
+        x, y = (j + 0.5) * TILE_SIZE, (i + 0.5) * TILE_SIZE
+        pawnsPosition[i].append(Pawn(x, y, board[i][j]))
+
+
 def drawBoard(screen):
     for i in range(ROWS):
         for j in range(COLS):
@@ -45,24 +61,59 @@ def drawBoard(screen):
 def drawPawns(screen):
     for i in range(ROWS):
         for j in range(COLS):
-            pawn = board[i][j]
+            pawn = pawnsPosition[i][j].value
+            x, y = pawnsPosition[i][j].x, pawnsPosition[i][j].y
+
             color = LIGHT_PAWN_COLOR if pawn == 1 else DARK_PAWN_COLOR
             if pawn != 0:
                 pygame.draw.circle(
                     screen,
                     color,
-                    ((j + 0.5) * TILE_SIZE, (i + 0.5) * TILE_SIZE),
+                    (
+                        x,
+                        y,
+                    ),
                     PAWN_SIZE // 2,
                 )
 
 
-running = True
-while running:
+def getPawn(mouseX, mouseY):
+    for i in range(ROWS):
+        for j in range(COLS):
+            pawn = pawnsPosition[i][j]
+            if pawn.value == 0:
+                continue
 
+            dx = pawn.x - mouseX
+            dy = pawn.y - mouseY
+
+            if dx**2 + dy**2 <= (PAWN_SIZE // 2) ** 2:
+                return pawn
+
+
+def movePawn(pawn, x, y):
+    if not pawn:
+        return
+    x, y = pygame.mouse.get_pos()
+    pawn.x = x
+    pawn.y = y
+
+
+running = True
+chosenPawn = None
+while running:
+    mouseX, mouseY = pygame.mouse.get_pos()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            chosenPawn = getPawn(mouseX, mouseY)
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            chosenPawn = None
+
+    movePawn(chosenPawn, mouseX, mouseY)
     drawBoard(screen)
     drawPawns(screen)
     pygame.display.flip()
