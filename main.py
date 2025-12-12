@@ -99,6 +99,15 @@ def movePawn(pawn, x, y):
     pawn.y = y
 
 
+def placePawn(pawn):
+    if not pawn: return
+    
+    cellX, cellY = pawn.x // TILE_SIZE, pawn.y // TILE_SIZE
+
+    pawn.x = (cellX + 0.5) * TILE_SIZE
+    pawn.y = (cellY + 0.5) * TILE_SIZE
+
+
 running = True
 chosenPawn = None
 while running:
@@ -111,6 +120,7 @@ while running:
             chosenPawn = getPawn(mouseX, mouseY)
 
         if event.type == pygame.MOUSEBUTTONUP:
+            placePawn(chosenPawn)
             chosenPawn = None
 
     movePawn(chosenPawn, mouseX, mouseY)
