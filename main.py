@@ -97,11 +97,6 @@ def movePawn(pawn, mouseX, mouseY):
         PAWN_SIZE // 2,
     )
 
-
-def inBound(x, y):
-    return 0 <= x < 8 and 0 <= y < 8
-
-
 def dropPawn(pawn, mouseX, mouseY):
     if not pawn:
         return
@@ -112,11 +107,19 @@ def dropPawn(pawn, mouseX, mouseY):
     prev = board[i][j]
     validMove = False
     delta = 1 if turn else -1
-
+    
+    capture = False
+    midX, midY = (i + cellY) // 2, (j + cellX) // 2
+    
     if cellY - i == delta and abs(cellX - j) == 1:
         validMove = True
-
+    elif cellY - i == delta * 2 and abs(cellX - j) == 2 and board[i][j] * board[midX][midY] == -1:
+        capture = True
+        validMove = True
+    
     if board[cellY][cellX] == 0 and validMove:
+        if capture:
+            board[midX][midY] = 0
         board[i][j] = 0
         board[cellY][cellX] = prev
 
