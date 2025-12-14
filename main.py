@@ -89,13 +89,17 @@ def movePawn(pawn, mouseX, mouseY):
         return
     i, j = pawn
     color = LIGHT_PAWN_COLOR if board[i][j] == 1 else DARK_PAWN_COLOR
-    
+
     pygame.draw.circle(
         screen,
         color,
         (mouseX, mouseY),
         PAWN_SIZE // 2,
     )
+
+
+def inBound(x, y):
+    return 0 <= x < 8 and 0 <= y < 8
 
 
 def dropPawn(pawn, mouseX, mouseY):
@@ -106,10 +110,16 @@ def dropPawn(pawn, mouseX, mouseY):
     i, j = pawn
 
     prev = board[i][j]
-    if board[cellY][cellX] == 0:
+    validMove = False
+    delta = 1 if turn else -1
+
+    if cellY - i == delta and abs(cellX - j) == 1:
+        validMove = True
+
+    if board[cellY][cellX] == 0 and validMove:
         board[i][j] = 0
         board[cellY][cellX] = prev
-        
+
         return True
 
     return False
@@ -132,11 +142,11 @@ while running:
                 value = board[i][j]
                 if (not turn and value == 1) or (turn and value == -1):
                     chosenPawn = res
-                
+
         if event.type == pygame.MOUSEBUTTONUP:
             res = dropPawn(chosenPawn, mouseX, mouseY)
             if res:
-                turn = not turn 
+                turn = not turn
             chosenPawn = None
 
     drawBoard(screen)
