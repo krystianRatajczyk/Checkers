@@ -33,20 +33,8 @@ board = [
 ]
 
 
-class Pawn:
-    def __init__(self, x, y, value):
-        self.x = x
-        self.y = y
-        self.value = value
-
-
-pawnsPosition = []
-
-for i in range(ROWS):
-    pawnsPosition.append([])
-    for j in range(COLS):
-        x, y = (j + 0.5) * TILE_SIZE, (i + 0.5) * TILE_SIZE
-        pawnsPosition[i].append(Pawn(x, y, board[i][j]))
+def getPixelPos(i, j):
+    return ((j + 0.5) * TILE_SIZE, (i + 0.5) * TILE_SIZE)
 
 
 def drawBoard(screen):
@@ -61,11 +49,14 @@ def drawBoard(screen):
 def drawPawns(screen):
     for i in range(ROWS):
         for j in range(COLS):
-            pawn = pawnsPosition[i][j].value
-            x, y = pawnsPosition[i][j].x, pawnsPosition[i][j].y
+            pawn = (i, j)
+            if pawn == chosenPawn:
+                continue
 
-            color = LIGHT_PAWN_COLOR if pawn == 1 else DARK_PAWN_COLOR
-            if pawn != 0:
+            x, y = getPixelPos(i, j)
+            color = LIGHT_PAWN_COLOR if board[i][j] == 1 else DARK_PAWN_COLOR
+
+            if board[i][j] != 0:
                 pygame.draw.circle(
                     screen,
                     color,
@@ -80,36 +71,54 @@ def drawPawns(screen):
 def getPawn(mouseX, mouseY):
     for i in range(ROWS):
         for j in range(COLS):
-            pawn = pawnsPosition[i][j]
-            if pawn.value == 0:
+            pawn = board[i][j]
+            if pawn == 0:
                 continue
-
-            dx = pawn.x - mouseX
-            dy = pawn.y - mouseY
+            x, y = getPixelPos(i, j)
+            dx = x - mouseX
+            dy = y - mouseY
 
             if dx**2 + dy**2 <= (PAWN_SIZE // 2) ** 2:
-                return pawn
+                return (i, j)
+
+    return None
 
 
-def movePawn(pawn, x, y):
+def movePawn(pawn, mouseX, mouseY):
     if not pawn:
         return
-    x, y = pygame.mouse.get_pos()
-    pawn.x = x
-    pawn.y = y
-
-
-def placePawn(pawn):
-    if not pawn: return
+    i, j = pawn
+    color = LIGHT_PAWN_COLOR if board[i][j] == 1 else DARK_PAWN_COLOR
     
-    cellX, cellY = pawn.x // TILE_SIZE, pawn.y // TILE_SIZE
+    pygame.draw.circle(
+        screen,
+        color,
+        (mouseX, mouseY),
+        PAWN_SIZE // 2,
+    )
 
-    pawn.x = (cellX + 0.5) * TILE_SIZE
-    pawn.y = (cellY + 0.5) * TILE_SIZE
+
+def dropPawn(pawn, mouseX, mouseY):
+    if not pawn:
+        return
+
+    cellX, cellY = mouseX // TILE_SIZE, mouseY // TILE_SIZE
+    i, j = pawn
+
+    prev = board[i][j]
+    if board[cellY][cellX] == 0:
+        board[i][j] = 0
+        board[cellY][cellX] = prev
+        
+        return True
+
+    return False
 
 
 running = True
-chosenPawn = None
+turn = False
+chosenPawn = None  # (i, j)
+
 while running:
     mouseX, mouseY = pygame.mouse.get_pos()
     for event in pygame.event.get():
@@ -117,15 +126,22 @@ while running:
             running = False
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            chosenPawn = getPawn(mouseX, mouseY)
-
+            res = getPawn(mouseX, mouseY)
+            if res:
+                i, j = res
+                value = board[i][j]
+                if (not turn and value == 1) or (turn and value == -1):
+                    chosenPawn = res
+                
         if event.type == pygame.MOUSEBUTTONUP:
-            placePawn(chosenPawn)
+            res = dropPawn(chosenPawn, mouseX, mouseY)
+            if res:
+                turn = not turn 
             chosenPawn = None
 
-    movePawn(chosenPawn, mouseX, mouseY)
     drawBoard(screen)
     drawPawns(screen)
+    movePawn(chosenPawn, mouseX, mouseY)
     pygame.display.flip()
     clock.tick(FPS)
 
