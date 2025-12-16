@@ -7,11 +7,20 @@ TILE_SIZE = 70
 PAWN_SIZE = 40
 ROWS, COLS = 8, 8
 
-LIGHT_TILE_COLOR = (240, 220, 130)
-DARK_TILE_COLOR = (34, 139, 34)
+LIGHT_TILE_COLOR = (200, 200, 200)
+DARK_TILE_COLOR = (100, 100, 100)
 
-DARK_PAWN_COLOR = (139, 0, 0)
+DARK_PAWN_COLOR = (0, 0, 0)
 LIGHT_PAWN_COLOR = (255, 255, 255)
+DARK_KING_COLOR = (171, 113, 43)
+LIGHT_KING_COLOR = (150, 150, 150)
+
+COLORS = {
+    1: LIGHT_PAWN_COLOR,
+    -1: DARK_PAWN_COLOR,
+    2: LIGHT_KING_COLOR,
+    -2: DARK_KING_COLOR,
+}
 
 SCREEN_WIDTH = TILE_SIZE * COLS
 SCREEN_HEIGHT = TILE_SIZE * ROWS
@@ -54,9 +63,9 @@ def drawPawns(screen):
                 continue
 
             x, y = getPixelPos(i, j)
-            color = LIGHT_PAWN_COLOR if board[i][j] == 1 else DARK_PAWN_COLOR
 
             if board[i][j] != 0:
+                color = COLORS[board[i][j]]
                 pygame.draw.circle(
                     screen,
                     color,
@@ -88,7 +97,7 @@ def movePawn(pawn, mouseX, mouseY):
     if not pawn:
         return
     i, j = pawn
-    color = LIGHT_PAWN_COLOR if board[i][j] == 1 else DARK_PAWN_COLOR
+    color = COLORS[board[i][j]]
 
     pygame.draw.circle(
         screen,
@@ -97,33 +106,66 @@ def movePawn(pawn, mouseX, mouseY):
         PAWN_SIZE // 2,
     )
 
-def dropPawn(pawn, mouseX, mouseY):
+
+def inBound(x, y):
+    return 0 <= x < 8 and 0 <= y < 8
+
+
+def dropPawn(pawn, mouseX, mouseY, turn):
     if not pawn:
         return
 
-    cellX, cellY = mouseX // TILE_SIZE, mouseY // TILE_SIZE
+    col, row = mouseX // TILE_SIZE, mouseY // TILE_SIZE
+
     i, j = pawn
+
+    isKing = abs(board[i][j]) == 2  # king is either -2 or 2
+    kingMoves = [[1, 1], [-1, -1], [1, -1], [-1, 1]]
+    pawnMoves = [[-1, -1], [-1, 1]] if not turn else [[1, 1], [1, -1]]  # going up
+    moves = kingMoves if isKing else pawnMoves
+
+    availableMoves = [(i + dx, j + dy) for dx, dy in moves]
+
+    captureMoves = []
+    for dx, dy in moves:
+        jumpX, jumpY = i + dx, j + dy
+        landX, landY = (
+            i + dx + dx,
+            j + dy + dy,
+        )
+
+        if (
+            inBound(jumpX, jumpY)
+            and inBound(landX, landY)
+            and board[jumpX][jumpY] * board[i][j] < 0
+        ):
+            captureMoves.append((landX, landY))
 
     prev = board[i][j]
     validMove = False
-    delta = 1 if turn else -1
-    
     capture = False
-    midX, midY = (i + cellY) // 2, (j + cellX) // 2
-    
-    if cellY - i == delta and abs(cellX - j) == 1:
-        validMove = True
-    elif cellY - i == delta * 2 and abs(cellX - j) == 2 and board[i][j] * board[midX][midY] == -1:
-        capture = True
-        validMove = True
-    
-    if board[cellY][cellX] == 0 and validMove:
-        if capture:
-            board[midX][midY] = 0
-        board[i][j] = 0
-        board[cellY][cellX] = prev
 
-        return True
+    if (row, col) in availableMoves:
+        validMove = True
+
+    if (row, col) in captureMoves:
+        validMove = True
+        capture = True
+
+    if board[row][col] == 0:
+        if capture:  # opposite pawns
+            midX, midY = (i + row) // 2, (j + col) // 2
+            board[midX][midY] = 0
+
+        if validMove:
+            board[i][j] = 0
+            side = 1 if not turn else -1
+
+            if (not turn and row == 0) or (turn and row == ROWS - 1):
+                board[row][col] = 2 * side
+            else:
+                board[row][col] = prev
+            return True
 
     return False
 
@@ -140,14 +182,19 @@ while running:
 
         if event.type == pygame.MOUSEBUTTONDOWN:
             res = getPawn(mouseX, mouseY)
-            if res:
-                i, j = res
-                value = board[i][j]
-                if (not turn and value == 1) or (turn and value == -1):
-                    chosenPawn = res
+            if not res:
+                continue
+
+            i, j = res
+            value = board[i][j]
+            print(i, j, value, res)
+            if (not turn and value > 0) or (turn and value < 0):
+                print("here", res)
+                chosenPawn = res
 
         if event.type == pygame.MOUSEBUTTONUP:
-            res = dropPawn(chosenPawn, mouseX, mouseY)
+            res = dropPawn(chosenPawn, mouseX, mouseY, turn)
+
             if res:
                 turn = not turn
             chosenPawn = None
